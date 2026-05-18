@@ -103,9 +103,7 @@
     transition: border-color .15s;
   }
 
-  .form-row input:focus {
-    border-color: var(--accent);
-  }
+  .form-row input:focus { border-color: var(--accent); }
 
   .time-row {
     display: grid;
@@ -168,12 +166,7 @@
 
   .btn:hover { opacity: .85; }
   .btn:active { transform: scale(.97); }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #fff;
-  }
-
+  .btn-primary { background: var(--accent); color: #fff; }
   .btn-ghost {
     background: var(--surface2);
     color: var(--text-muted);
@@ -205,13 +198,7 @@
   .activity-item:hover { border-color: #444; }
   .activity-item.editing { border-color: var(--accent); }
 
-  .act-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
+  .act-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
   .act-info { flex: 1; min-width: 0; }
 
   .act-name {
@@ -222,17 +209,8 @@
     text-overflow: ellipsis;
   }
 
-  .act-time {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
-  }
-
-  .act-actions {
-    display: flex;
-    gap: 4px;
-    flex-shrink: 0;
-  }
+  .act-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .act-actions { display: flex; gap: 4px; flex-shrink: 0; }
 
   .icon-btn {
     background: none;
@@ -287,7 +265,7 @@
 
     <div class="form-row">
       <label>Activity name</label>
-      <input type="text" id="actName" placeholder="e.g. Sleep, Work, Exercise…" maxlength="40">
+      <input type="text" id="actName" placeholder="e.g. Sleep, Work, Exercise&hellip;" maxlength="40">
     </div>
 
     <div class="time-row">
@@ -307,8 +285,8 @@
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" id="saveBtn" onclick="saveActivity()">Add Activity</button>
-      <button class="btn btn-ghost" id="cancelBtn" style="display:none" onclick="cancelEdit()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="saveBtn">Add Activity</button>
+      <button type="button" class="btn btn-ghost" id="cancelBtn" style="display:none">Cancel</button>
     </div>
   </div>
 
@@ -317,85 +295,116 @@
     <div class="activity-list" id="activityList">
       <p class="empty-hint">No activities yet.<br>Add one on the left!</p>
     </div>
-    <button class="btn btn-ghost" style="font-size:11px" onclick="clearAll()">Clear all</button>
+    <button type="button" class="btn btn-ghost" id="clearBtn" style="font-size:11px">Clear all</button>
   </div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-const PALETTE = [
+var PALETTE = [
   '#4a6fa5','#6a5acd','#9b59b6','#c0392b',
   '#e67e22','#f1c40f','#27ae60','#1abc9c',
   '#16a085','#2980b9','#8e44ad','#d35400',
-  '#c0392b','#e91e63','#00bcd4','#795548',
+  '#c0392b','#e91e63','#00bcd4','#795548'
 ];
 
-let activities = JSON.parse(localStorage.getItem('clock-activities') || '[]');
-let editingId  = null;
-let selectedColor = PALETTE[0];
+// Initialize activities safely — if localStorage is blocked it throws,
+// and a let declaration left mid-assignment puts the variable in the TDZ,
+// making every later access throw a silent ReferenceError.
+var activities = [];
+var editingId = null;
+var selectedColor = PALETTE[0];
+
+try {
+  var _stored = localStorage.getItem('clock-activities');
+  if (_stored) activities = JSON.parse(_stored);
+} catch (e) {}
+
+// Wire up buttons via addEventListener — no inline onclick in HTML
+document.getElementById('saveBtn').addEventListener('click', saveActivity);
+document.getElementById('cancelBtn').addEventListener('click', cancelEdit);
+document.getElementById('clearBtn').addEventListener('click', clearAll);
+document.getElementById('actName').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') saveActivity();
+});
 
 buildSwatches();
 render();
 setInterval(render, 1000);
 
+// ── Swatches ──────────────────────────────────────────────────────────────────
 function buildSwatches() {
-  const row = document.getElementById('colorRow');
+  var row = document.getElementById('colorRow');
   row.innerHTML = '';
-  PALETTE.forEach(c => {
-    const s = document.createElement('div');
+
+  PALETTE.forEach(function (c) {
+    var s = document.createElement('div');
     s.className = 'swatch' + (c === selectedColor ? ' selected' : '');
     s.style.background = c;
-    s.onclick = () => selectColor(c, s);
+    s.addEventListener('click', function () { selectColor(c, s); });
     row.appendChild(s);
   });
-  const wrap = document.createElement('div');
+
+  var wrap = document.createElement('div');
   wrap.className = 'color-custom';
   wrap.title = 'Custom color';
-  wrap.style.background = PALETTE.includes(selectedColor) ? 'transparent' : selectedColor;
-  const picker = document.createElement('input');
+  wrap.style.background = PALETTE.indexOf(selectedColor) >= 0 ? 'transparent' : selectedColor;
+
+  var picker = document.createElement('input');
   picker.type = 'color';
   picker.value = '#ffffff';
-  picker.oninput = e => {
+  picker.addEventListener('input', function (e) {
     selectedColor = e.target.value;
     wrap.style.background = selectedColor;
-    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
-  };
+    document.querySelectorAll('.swatch').forEach(function (s) { s.classList.remove('selected'); });
+  });
+
   wrap.appendChild(picker);
   row.appendChild(wrap);
 }
 
 function selectColor(c, el) {
   selectedColor = c;
-  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+  document.querySelectorAll('.swatch').forEach(function (s) { s.classList.remove('selected'); });
   el.classList.add('selected');
 }
 
+// ── Save / edit / delete ──────────────────────────────────────────────────────
 function saveActivity() {
-  const name  = document.getElementById('actName').value.trim();
-  const start = document.getElementById('actStart').value;
-  const end   = document.getElementById('actEnd').value;
-  if (!name)  { toast('Enter an activity name'); return; }
-  if (!start || !end) { toast('Set start and end times'); return; }
-  const startM = timeToMinutes(start);
-  const endM   = timeToMinutes(end);
-  if (endM === startM) { toast('Start and end can\'t be the same'); return; }
-  const entry = { id: editingId != null ? editingId : Date.now(), name, start, end, color: selectedColor };
+  var name  = document.getElementById('actName').value.trim();
+  var start = document.getElementById('actStart').value;
+  var end   = document.getElementById('actEnd').value;
+
+  if (!name)        { toast('Enter an activity name'); return; }
+  if (!start)       { toast('Set a start time'); return; }
+  if (!end)         { toast('Set an end time'); return; }
+  if (start === end) { toast('Start and end can\'t be the same'); return; }
+
+  var id = (editingId !== null) ? editingId : Date.now();
+  var entry = { id: id, name: name, start: start, end: end, color: selectedColor };
+
   if (editingId !== null) {
-    const idx = activities.findIndex(a => a.id === editingId);
-    activities[idx] = entry;
+    for (var i = 0; i < activities.length; i++) {
+      if (activities[i].id === editingId) { activities[i] = entry; break; }
+    }
     editingId = null;
   } else {
     activities.push(entry);
   }
+
   persist();
   resetForm();
   render();
 }
 
 function editActivity(id) {
-  const a = activities.find(a => a.id === id);
+  var a = null;
+  for (var i = 0; i < activities.length; i++) {
+    if (activities[i].id === id) { a = activities[i]; break; }
+  }
   if (!a) return;
+
   editingId = id;
   document.getElementById('actName').value  = a.name;
   document.getElementById('actStart').value = a.start;
@@ -405,13 +414,20 @@ function editActivity(id) {
   document.getElementById('formTitle').textContent = 'Edit Activity';
   document.getElementById('saveBtn').textContent   = 'Save Changes';
   document.getElementById('cancelBtn').style.display = '';
-  document.getElementById('activityList').querySelectorAll('.activity-item')
-    .forEach(el => el.classList.toggle('editing', +el.dataset.id === id));
+
+  var items = document.getElementById('activityList').querySelectorAll('.activity-item');
+  for (var j = 0; j < items.length; j++) {
+    items[j].classList.toggle('editing', Number(items[j].dataset.id) === id);
+  }
 }
 
 function deleteActivity(id) {
-  activities = activities.filter(a => a.id !== id);
-  if (editingId === id) cancelEdit();
+  var next = [];
+  for (var i = 0; i < activities.length; i++) {
+    if (activities[i].id !== id) next.push(activities[i]);
+  }
+  activities = next;
+  if (editingId === id) { editingId = null; resetForm(); }
   persist();
   render();
 }
@@ -426,8 +442,9 @@ function clearAll() {
   if (!activities.length) return;
   if (!confirm('Clear all activities?')) return;
   activities = [];
+  editingId = null;
   persist();
-  cancelEdit();
+  resetForm();
   render();
 }
 
@@ -443,172 +460,212 @@ function resetForm() {
 }
 
 function persist() {
-  try { localStorage.setItem('clock-activities', JSON.stringify(activities)); } catch(_) {}
+  try { localStorage.setItem('clock-activities', JSON.stringify(activities)); } catch (e) {}
 }
 
+// ── Render ────────────────────────────────────────────────────────────────────
 function render() {
-  renderClock();
   renderList();
+  renderClock();
 }
 
 function renderList() {
-  const el = document.getElementById('activityList');
-  const count = document.getElementById('actCount');
+  var el    = document.getElementById('activityList');
+  var count = document.getElementById('actCount');
   count.textContent = activities.length ? '(' + activities.length + ')' : '';
+
   if (!activities.length) {
     el.innerHTML = '<p class="empty-hint">No activities yet.<br>Add one on the left!</p>';
     return;
   }
-  const sorted = [...activities].sort((a,b) => timeToMinutes(a.start) - timeToMinutes(b.start));
-  el.innerHTML = sorted.map(a => {
-    const startM = timeToMinutes(a.start);
-    let endM = timeToMinutes(a.end);
+
+  var sorted = activities.slice().sort(function (a, b) {
+    return timeToMinutes(a.start) - timeToMinutes(b.start);
+  });
+
+  var html = '';
+  for (var i = 0; i < sorted.length; i++) {
+    var a = sorted[i];
+    var startM = timeToMinutes(a.start);
+    var endM   = timeToMinutes(a.end);
     if (endM <= startM) endM += 1440;
-    const dur = endM - startM;
-    const h = Math.floor(dur/60), m = dur%60;
-    const durStr = h ? h + 'h ' + m + 'm' : m + 'm';
-    return '<div class="activity-item' + (editingId === a.id ? ' editing' : '') + '" data-id="' + a.id + '" onclick="editActivity(' + a.id + ')">' +
+    var dur = endM - startM;
+    var h = Math.floor(dur / 60);
+    var m = dur % 60;
+    var durStr = h ? h + 'h ' + m + 'm' : m + 'm';
+    var editing = (editingId === a.id) ? ' editing' : '';
+
+    html += '<div class="activity-item' + editing + '" data-id="' + a.id + '">' +
       '<div class="act-dot" style="background:' + a.color + '"></div>' +
       '<div class="act-info">' +
         '<div class="act-name">' + escHtml(a.name) + '</div>' +
-        '<div class="act-time">' + a.start + ' – ' + a.end + ' &nbsp;·&nbsp; ' + durStr + '</div>' +
+        '<div class="act-time">' + a.start + ' &ndash; ' + a.end + ' &nbsp;&middot;&nbsp; ' + durStr + '</div>' +
       '</div>' +
       '<div class="act-actions">' +
-        '<button class="icon-btn" title="Delete" onclick="event.stopPropagation();deleteActivity(' + a.id + ')">✕</button>' +
+        '<button type="button" class="icon-btn" data-del="' + a.id + '" title="Delete">&times;</button>' +
       '</div>' +
     '</div>';
-  }).join('');
+  }
+  el.innerHTML = html;
+
+  // Wire up clicks after inserting HTML
+  var items = el.querySelectorAll('.activity-item');
+  for (var j = 0; j < items.length; j++) {
+    (function (item) {
+      var itemId = Number(item.dataset.id);
+      item.addEventListener('click', function () { editActivity(itemId); });
+      var delBtn = item.querySelector('.icon-btn[data-del]');
+      if (delBtn) {
+        delBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          deleteActivity(itemId);
+        });
+      }
+    })(items[j]);
+  }
 }
 
-const R_OUTER = 220;
-const R_INNER = 160;
-const R_TICKS_OUTER = 225;
-const R_TICKS_INNER_H = 210;
-const R_TICKS_INNER_M = 215;
-const R_LABELS = 240;
+// ── SVG clock ─────────────────────────────────────────────────────────────────
+var R_OUTER = 220;
+var R_INNER = 160;
+var R_TICKS_OUTER  = 225;
+var R_TICKS_INNER_H = 210;
+var R_TICKS_INNER_M = 215;
+var R_LABELS = 240;
 
 function renderClock() {
-  const svg = document.getElementById('clockSvg');
-  const now  = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-  const dayNames  = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
-  const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  const dayName = dayNames[now.getDay()];
-  const dateStr = monthNames[now.getMonth()] + ' ' + now.getDate();
-  const timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  var svg = document.getElementById('clockSvg');
+  var now = new Date();
+  var totalMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
 
-  let html = '';
-  html += '<circle cx="0" cy="0" r="' + R_OUTER + '" fill="#111" stroke="#1a1a1a" stroke-width="1"/>';
+  var DAY_NAMES   = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+  var MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  var dayName = DAY_NAMES[now.getDay()];
+  var dateStr = MONTH_NAMES[now.getMonth()] + ' ' + now.getDate();
+  var hh = String(now.getHours()).padStart(2, '0');
+  var mm = String(now.getMinutes()).padStart(2, '0');
+  var timeStr = hh + ':' + mm;
 
-  activities.forEach(a => { html += arcSegment(a.start, a.end, a.color, a.name); });
+  var html = '<circle cx="0" cy="0" r="' + R_OUTER + '" fill="#111" stroke="#1a1a1a" stroke-width="1"/>';
 
-  for (let i = 0; i < 1440; i++) {
-    const isHour    = i % 60 === 0;
-    const isQuarter = i % 15 === 0;
-    const isFive    = i % 5  === 0;
-    if (!isFive) continue;
-    const angle = (i / 1440) * 360 - 90;
-    const rad   = angle * Math.PI / 180;
-    const inner = isHour ? R_TICKS_INNER_H : (isQuarter ? 213 : R_TICKS_INNER_M);
-    const x1 = (Math.cos(rad) * inner).toFixed(2);
-    const y1 = (Math.sin(rad) * inner).toFixed(2);
-    const x2 = (Math.cos(rad) * R_TICKS_OUTER).toFixed(2);
-    const y2 = (Math.sin(rad) * R_TICKS_OUTER).toFixed(2);
-    const w  = isHour ? 1.5 : 0.7;
-    const col = isHour ? '#888' : '#444';
-    html += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+w+'"/>';
+  for (var ai = 0; ai < activities.length; ai++) {
+    html += arcSegment(activities[ai]);
   }
 
-  [[0,'00:00'],[360,'6:00'],[720,'12:00'],[1080,'18:00']].forEach(function(pair) {
-    const angle = (pair[0] / 1440) * 360 - 90;
-    const rad   = angle * Math.PI / 180;
-    const x = (Math.cos(rad) * R_LABELS).toFixed(2);
-    const y = (Math.sin(rad) * R_LABELS).toFixed(2);
-    html += '<text x="'+x+'" y="'+y+'" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="11" font-family="\'Segoe UI\',system-ui,sans-serif" letter-spacing="0.5">'+pair[1]+'</text>';
-  });
+  for (var i = 0; i < 1440; i += 5) {
+    var isHour    = (i % 60 === 0);
+    var isQuarter = (i % 15 === 0);
+    var angle = (i / 1440) * 360 - 90;
+    var rad   = angle * Math.PI / 180;
+    var inner = isHour ? R_TICKS_INNER_H : (isQuarter ? 213 : R_TICKS_INNER_M);
+    var x1 = fmt(Math.cos(rad) * inner);
+    var y1 = fmt(Math.sin(rad) * inner);
+    var x2 = fmt(Math.cos(rad) * R_TICKS_OUTER);
+    var y2 = fmt(Math.sin(rad) * R_TICKS_OUTER);
+    html += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(isHour?'#888':'#444')+'" stroke-width="'+(isHour?1.5:0.7)+'"/>';
+  }
 
-  const handAngle = (totalMinutes / 1440) * 360 - 90;
-  const handRad   = handAngle * Math.PI / 180;
-  const hx = (Math.cos(handRad) * ((R_INNER + R_OUTER) / 2)).toFixed(2);
-  const hy = (Math.sin(handRad) * ((R_INNER + R_OUTER) / 2)).toFixed(2);
+  var LABELS = [[0,'00:00'],[360,'6:00'],[720,'12:00'],[1080,'18:00']];
+  for (var li = 0; li < LABELS.length; li++) {
+    var lAngle = (LABELS[li][0] / 1440) * 360 - 90;
+    var lRad   = lAngle * Math.PI / 180;
+    var lx = fmt(Math.cos(lRad) * R_LABELS);
+    var ly = fmt(Math.sin(lRad) * R_LABELS);
+    html += '<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="11" font-family="sans-serif">'+LABELS[li][1]+'</text>';
+  }
+
+  var hAngle = (totalMinutes / 1440) * 360 - 90;
+  var hRad   = hAngle * Math.PI / 180;
+  var hMid   = (R_INNER + R_OUTER) / 2;
+  var hx = fmt(Math.cos(hRad) * hMid);
+  var hy = fmt(Math.sin(hRad) * hMid);
   html += '<circle cx="'+hx+'" cy="'+hy+'" r="6" fill="#fff" filter="url(#glow)"/>';
 
-  html += '<text x="0" y="-22" text-anchor="middle" fill="#ffffff" font-size="52" font-weight="700" font-family="\'Segoe UI\',system-ui,sans-serif" letter-spacing="-1">'+timeStr+'</text>';
-  html += '<text x="0" y="22" text-anchor="middle" fill="#aaa" font-size="16" font-weight="400" font-family="\'Segoe UI\',system-ui,sans-serif" letter-spacing="3">'+dayName+'</text>';
-  html += '<text x="0" y="44" text-anchor="middle" fill="#666" font-size="12" font-family="\'Segoe UI\',system-ui,sans-serif" letter-spacing="2">'+dateStr+'</text>';
+  html += '<text x="0" y="-22" text-anchor="middle" fill="#fff" font-size="52" font-weight="700" font-family="sans-serif">'+timeStr+'</text>';
+  html += '<text x="0" y="22"  text-anchor="middle" fill="#aaa" font-size="16" font-family="sans-serif" letter-spacing="3">'+dayName+'</text>';
+  html += '<text x="0" y="44"  text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif" letter-spacing="2">'+dateStr+'</text>';
 
-  const defs = '<defs><filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  var defs = '<defs><filter id="glow" x="-50%" y="-50%" width="200%" height="200%">'+
+    '<feGaussianBlur stdDeviation="3" result="b"/>'+
+    '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'+
+    '</filter></defs>';
+
   svg.innerHTML = defs + html;
 }
 
-function arcSegment(startTime, endTime, color, label) {
-  var startM = timeToMinutes(startTime);
-  var endM   = timeToMinutes(endTime);
+function arcSegment(a) {
+  var startM = timeToMinutes(a.start);
+  var endM   = timeToMinutes(a.end);
   if (endM <= startM) endM += 1440;
 
   var startAngle = (startM / 1440) * 360 - 90;
   var endAngle   = (endM   / 1440) * 360 - 90;
   var spanDeg    = endAngle - startAngle;
 
-  var outerPath = describeArc(0, 0, R_OUTER, startAngle, endAngle, false);
-  var innerPath = describeArc(0, 0, R_INNER, endAngle, startAngle, true);  // counter-clockwise back
+  // Outer arc CW, inner arc CCW back — produces correct ring segment
+  var p1 = polar(R_OUTER, startAngle);
+  var p2 = polar(R_INNER, endAngle);
+  var d  = 'M ' + p1[0] + ' ' + p1[1] +
+           ' ' + arc(R_OUTER, startAngle, endAngle, 1) +
+           ' L ' + p2[0] + ' ' + p2[1] +
+           ' ' + arc(R_INNER, endAngle, startAngle, 0) + ' Z';
 
-  var p1 = polarXY(R_OUTER, startAngle);
-  var p2 = polarXY(R_INNER, endAngle);
-  var d  = 'M '+p1[0]+' '+p1[1]+' '+outerPath+' L '+p2[0]+' '+p2[1]+' '+innerPath+' Z';
-
-  var labelHtml = spanDeg > 8 ? buildArcLabel(label, startAngle, endAngle, (R_INNER+R_OUTER)/2, color) : '';
-  return '<path d="'+d+'" fill="'+color+'" opacity="0.85"/>'+labelHtml;
+  var label = spanDeg > 8 ? arcLabel(a.name, startAngle, endAngle, (R_INNER + R_OUTER) / 2, a.color) : '';
+  return '<path d="' + d + '" fill="' + a.color + '" opacity="0.85"/>' + label;
 }
 
-function buildArcLabel(text, startAngle, endAngle, r, color) {
+function arcLabel(text, startAngle, endAngle, r, color) {
   var spanDeg  = endAngle - startAngle;
   var midAngle = startAngle + spanDeg / 2;
   var textR    = r + 2;
-  var pathId   = 'tp' + (Math.abs(startAngle*10)|0) + 'e' + (Math.abs(endAngle*10)|0);
   var fs       = Math.min(12, Math.max(7, spanDeg * 0.6));
+  var pid      = 'p' + (Math.abs(startAngle * 10) | 0) + '_' + (Math.abs(endAngle * 10) | 0);
   var pathD;
+
+  // Flip arc direction on left half so text is never upside-down
   if (midAngle > 90 && midAngle < 270) {
-    var ep = polarXY(textR, endAngle - 1);
-    pathD = 'M '+ep[0]+' '+ep[1]+' '+describeArc(0,0,textR,endAngle-1,startAngle+1,true);
+    var ep = polar(textR, endAngle - 1);
+    pathD = 'M ' + ep[0] + ' ' + ep[1] + ' ' + arc(textR, endAngle - 1, startAngle + 1, 0);
   } else {
-    var sp = polarXY(textR, startAngle + 1);
-    pathD = 'M '+sp[0]+' '+sp[1]+' '+describeArc(0,0,textR,startAngle+1,endAngle-1,false);
+    var sp = polar(textR, startAngle + 1);
+    pathD = 'M ' + sp[0] + ' ' + sp[1] + ' ' + arc(textR, startAngle + 1, endAngle - 1, 1);
   }
-  var textColor = lightenColor(color);
-  return '<defs><path id="'+pathId+'" d="'+pathD+'"/></defs>' +
-    '<text font-size="'+fs+'" font-family="\'Segoe UI\',system-ui,sans-serif" font-weight="600" fill="'+textColor+'" letter-spacing="0.5">' +
-    '<textPath href="#'+pathId+'" startOffset="50%" text-anchor="middle">'+escHtml(text)+'</textPath></text>';
+
+  var tc = lighten(color);
+  return '<defs><path id="' + pid + '" d="' + pathD + '"/></defs>' +
+    '<text font-size="' + fs + '" font-family="sans-serif" font-weight="600" fill="' + tc + '">' +
+    '<textPath href="#' + pid + '" startOffset="50%" text-anchor="middle">' + escHtml(text) + '</textPath></text>';
 }
 
-function describeArc(cx, cy, r, startAngle, endAngle, reverse) {
-  var end   = polarXY(r, endAngle, cx, cy);
+// SVG arc command from startAngle to endAngle at radius r, sweep 1=CW 0=CCW
+function arc(r, startAngle, endAngle, sweep) {
+  var ep    = polar(r, endAngle);
   var diff  = endAngle - startAngle;
   var large = ((diff % 360) + 360) % 360 > 180 ? 1 : 0;
-  var sweep = reverse ? 0 : 1;
-  return 'A '+r+' '+r+' 0 '+large+' '+sweep+' '+end[0]+' '+end[1];
+  return 'A ' + r + ' ' + r + ' 0 ' + large + ' ' + sweep + ' ' + ep[0] + ' ' + ep[1];
 }
 
-function polarXY(r, angleDeg, cx, cy) {
-  cx = cx || 0; cy = cy || 0;
-  var rad = angleDeg * Math.PI / 180;
-  return [+((cx + Math.cos(rad)*r).toFixed(2)), +((cy + Math.sin(rad)*r).toFixed(2))];
+function polar(r, deg) {
+  var rad = deg * Math.PI / 180;
+  return [fmt(Math.cos(rad) * r), fmt(Math.sin(rad) * r)];
 }
+
+function fmt(n) { return n.toFixed(2); }
 
 function timeToMinutes(t) {
-  var parts = t.split(':');
-  return parseInt(parts[0],10) * 60 + parseInt(parts[1],10);
+  var p = t.split(':');
+  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
 }
 
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function lightenColor(hex) {
-  var r = parseInt(hex.slice(1,3),16);
-  var g = parseInt(hex.slice(3,5),16);
-  var b = parseInt(hex.slice(5,7),16);
-  return 'rgb('+Math.min(255,r+80)+','+Math.min(255,g+80)+','+Math.min(255,b+80)+')';
+function lighten(hex) {
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return 'rgb(' + Math.min(255, r + 80) + ',' + Math.min(255, g + 80) + ',' + Math.min(255, b + 80) + ')';
 }
 
 var toastTimer;
@@ -617,12 +674,8 @@ function toast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2400);
 }
-
-document.getElementById('actName').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') saveActivity();
-});
 </script>
 </body>
 </html>
