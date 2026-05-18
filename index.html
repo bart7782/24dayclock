@@ -472,7 +472,7 @@ function resetForm() {
 }
 
 function persist() {
-  localStorage.setItem('clock-activities', JSON.stringify(activities));
+  try { localStorage.setItem('clock-activities', JSON.stringify(activities)); } catch(_) {}
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -612,12 +612,9 @@ function arcSegment(startTime, endTime, color, label) {
   const spanDeg    = endAngle - startAngle;
 
   const outerPath = describeArc(0, 0, R_OUTER, startAngle, endAngle);
-  const innerPath = describeArc(0, 0, R_INNER, endAngle, startAngle);
+  const innerPath = describeArc(0, 0, R_INNER, endAngle, startAngle, true); // counter-clockwise back
 
-  // connecting lines
   const [ox1,oy1] = polarXY(R_OUTER, startAngle);
-  const [ix1,iy1] = polarXY(R_INNER, startAngle);
-  const [ox2,oy2] = polarXY(R_OUTER, endAngle);
   const [ix2,iy2] = polarXY(R_INNER, endAngle);
 
   const d = `M ${ox1} ${oy1} ${outerPath} L ${ix2} ${iy2} ${innerPath} L ${ox1} ${oy1} Z`;
